@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ضربات الجزاء - معلومات عامة</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
+
+        :root {
+            --ui-glow: rgba(0, 200, 255, 0.3);
+            --pitch-color-1: #1a662c;
+            --pitch-color-2: #165624;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%; margin: 0; padding: 0;
+            background: linear-gradient(to bottom, #06111f 0%, #0a2342 40%, var(--pitch-color-1) 40%, var(--pitch-color-2) 100%);
+            color: white; font-family: 'Tajawal', sans-serif;
+            overflow: hidden; overscroll-behavior: none; touch-action: none;
+        }
+
+        /* ------------------ بيئة الملعب (Stadium) ------------------ */
+        .stadium {
+            position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            perspective: 800px;
+        }
+
+        /* خطوط الملعب */
+        .pitch-lines {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) rotateX(60deg);
+            width: 300px; height: 400px; border: 3px solid rgba(255,255,255,0.6);
+            border-bottom: none; border-radius: 10px 10px 0 0; z-index: 1; pointer-events: none;
+        }
+        .penalty-arc {
+            position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 50px; border: 3px solid rgba(255,255,255,0.6);
+            border-bottom: none; border-radius: 50px 50px 0 0;
+        }
+
+        /* المرمى (Goal) */
+        .goal-post {
+            position: absolute; bottom: 35%; left: 50%; transform: translateX(-50%);
+            width: 250px; height: 120px;
+            border-top: 8px solid #fff; border-left: 8px solid #fff; border-right: 8px solid #fff;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 12px),
+                        repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 12px);
+            z-index: 2; box-shadow: inset 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* الحارس (Goalkeeper) */
+        .goalkeeper {
+            position: absolute; bottom: 38%; left: 50%; transform: translateX(-50%);
+            font-size: 4.5rem; z-index: 3; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            animation: gkIdle 2s infinite alternate ease-in-out;
+            filter: drop-shadow(0 10px 5px rgba(0,0,0,0.4));
+        }
+        @keyframes gkIdle { 0% { margin-left: -20px; } 100% { margin-left: 20px; } }
+        
+        /* حركات الحارس */
+        .gk-dive-left { animation: none; transform: translateX(-120px) rotate(-45deg) scale(1.1); bottom: 40%; }
+        .gk-dive-right { animation: none; transform: translateX(80px) rotate(45deg) scale(1.1); bottom: 40%; }
+        .gk-save { animation: none; transform: translateX(-50%) scale(1.3); bottom: 42%; }
+
+        /* الكرة (Ball) */
+        .ball {
+            position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%);
+            font-size: 3rem; z-index: 10; transition: all 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28);
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.6));
+        }
+
+        /* حركات الكرة (التسديد) */
+        .kick-goal-left { bottom: 45%; transform: translateX(-100px) scale(0.4) rotate(720deg); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
+        .kick-goal-right { bottom: 45%; transform: translateX(50px) scale(0.4) rotate(720deg); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
+        .kick-miss { bottom: 40%; transform: translateX(-50%) scale(0.6) rotate(360deg); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
+
+        /* كلمة هدف */
+        .goal-text {
+            position: absolute; top: 20%; left: 50%; transform: translate(-50%, 20px) scale(0);
+            font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px #ff3232, 0 0 40px #ff9d00;
+            z-index: 20; opacity: 0; transition: all 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28);
+        }
+        .goal-text.show { transform: translate(-50%, 0) scale(1); opacity: 1; }
+
+        /* ------------------ الواجهة العلوية (HUD) ------------------ */
+        .top-hud {
+            position: fixed; top: 15px; left: 15px; right: 15px;
+            display: flex; justify-content: space-between; z-index: 1000; pointer-events: none;
+        }
+        .streak-hud {
+            background: linear-gradient(45deg, #00b09b, #96c93d); color: white;
+            padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;
+            box-shadow: 0 3px 10px rgba(0, 176, 155, 0.4); display: none;
+            border: 1px solid #fffacd; animation: popIn 0.4s ease-out;
+        }
+        .highscore-hud {
+            background: rgba(255, 215, 0, 0.15); color: #ffd700;
+            padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;
+            border: 1px solid rgba(255, 215, 0, 0.5); box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
+        }
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* ------------------ واجهة الأسئلة (UI) ------------------ */
+        .ui-layer {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 100;
+            background: rgba(15, 20, 35, 0.98); border-top: 2px solid var(--ui-glow);
+            padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            border-radius: 25px 25px 0 0; width: 100%; max-width: 600px; text-align: center;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.9);
+            max-height: 50vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+        }
+        .ui-layer::-webkit-scrollbar { width: 5px; } .ui-layer::-webkit-scrollbar-thumb { background: #00aaff; border-radius: 5px; }
+
+        .top-tools { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; }
+        .q-counter { font-size: 0.95rem; color: #fff; font-weight: bold; margin: 0; background: #00aaff; padding: 4px 15px; border-radius: 12px; }
+
+        .timer-container { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 15px; }
+        .timer-bar { height: 100%; width: 100%; background: #00ff9d; transition: width 1s linear, background 0.3s; }
+        .timer-warning { background: #ff3232 !important; }
+
+        h2 { margin: 0 0 15px 0; color: #fff; font-size: 1.2rem; line-height: 1.5; }
+        
+        .options { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+        button.opt-btn { background: rgba(255, 255, 255, 0.05); color: white; border: 1px solid var(--ui-glow); padding: 14px 15px; border-radius: 12px; font-size: 1rem; font-family: 'Tajawal', sans-serif; cursor: pointer; transition: all 0.2s; text-align: center; font-weight: bold;}
+        button.opt-btn:disabled { opacity: 0.9; cursor: default; }
+
+        .speech-bubble { background: white; color: black; padding: 6px 12px; border-radius: 12px; font-size: 1rem; font-weight: 900; margin-bottom: 15px; display: none; opacity: 0; transition: opacity 0.3s; }
+
+        #explanation-box { display: none; margin-top: 15px; background: rgba(0, 0, 0, 0.4); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); animation: fadeIn 0.4s; text-align: center; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        #explanation-box h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
+        #explanation-box p { margin: 0 0 15px 0; font-size: 0.95rem; line-height: 1.6; color: #e2e8f0; }
+
+        #next-btn { background: linear-gradient(90deg, #00aaff, #00ff9d); color: #000; font-weight: 900; width: 100%; border: none; padding: 15px; border-radius: 12px; cursor: pointer; font-size: 1.1rem; }
+
+        /* شاشة النهاية */
+        #completion-screen { display: none; animation: fadeIn 0.8s; }
+        .trophy { font-size: 4rem; margin: 0; filter: drop-shadow(0 0 10px rgba(255,215,0,0.5));}
+        .score-text { font-size: 2.5rem; margin: 10px 0; font-weight: 900; }
+        #final-desc { font-size: 1rem; color: #aaa; margin-bottom: 20px; line-height: 1.5; }
+        
+        .action-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .action-btns button { flex: 1; border: none; font-weight: bold; color: #000; padding: 14px; border-radius: 10px; cursor: pointer; font-size: 1rem;}
+        .btn-restart { background: #fff; }
+        .btn-review { background: #00aaff; color: white !important;}
+
+        #review-screen { display: none; text-align: right; }
+        .review-item { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .review-q { font-weight: bold; color: #fff; margin-bottom: 10px; font-size: 1rem; line-height: 1.4; }
+        .review-ans { font-size: 0.95rem; margin-bottom: 8px; }
+        .review-ans span { font-weight: bold; padding: 3px 8px; border-radius: 5px; }
+        .ans-correct { background: rgba(0, 255, 150, 0.2); color: #00ff9d; }
+        .ans-wrong { background: rgba(255, 50, 50, 0.2); color: #ff3232; }
+        .review-exp { font-size: 0.9rem; color: #aaa; margin-top: 10px; border-top: 1px dashed #444; padding-top: 10px; }
+        .close-review-btn { width: 100%; background: #ef4444; color: white; border: none; font-weight: bold; margin-top: 10px; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 1.1rem;}
+
+        .confetti { position: fixed; width: 10px; height: 10px; background-color: #f00; z-index: 9999; animation: fall 3s linear forwards; pointer-events: none; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="top-hud">
+        <div class="highscore-hud" id="highscore-badge">🏆 أعلى نتيجة: 0</div>
+        <div class="streak-hud" id="streak-badge">🔥 هاتريك: 2</div>
+    </div>
+
+    <!-- الملعب (المرمى، الحارس، الكرة) -->
+    <div class="stadium">
+        <div class="goal-text" id="goal-text">GOAAAL! ⚽</div>
+        <div class="goal-post"></div>
+        <div class="goalkeeper" id="gk">🧤</div>
+        <div class="pitch-lines">
+            <div class="penalty-arc"></div>
+        </div>
+        <div class="ball" id="ball">⚽</div>
+    </div>
+
+    <!-- واجهة الأسئلة -->
+    <div class="ui-layer" id="ui-container">
+        <div id="quiz-content">
+            <div class="top-tools">
+                <div class="q-counter" id="q-counter">الضربة 1 من 5</div>
+            </div>
+            
+            <div class="timer-container">
+                <div class="timer-bar" id="timer-bar"></div>
+            </div>
+
+            <h2 id="question-text">جاري التحميل...</h2>
+            
+            <div class="speech-bubble" id="speech-bubble"></div>
+
+            <div class="options" id="options-container"></div>
+            
+            <div id="explanation-box">
+                <h3 id="result-title"></h3>
+                <p id="explanation-text"></p>
+                <button id="next-btn" onclick="moveToNext()">الضربة القادمة ⚽</button>
+            </div>
+        </div>
+        
+        <div id="completion-screen">
+            <div class="trophy" id="final-trophy">🏆</div>
+            <h2 id="final-praise">جاري الحساب...</h2>
+            <p id="final-desc">جاري التقييم...</p>
+            
+            <div class="score-text" id="final-score">0 / 5</div>
+            
+            <div class="action-btns">
+                <button class="btn-review" onclick="showReview()">مراجعة 📋</button>
+                <button class="btn-restart" onclick="startFresh()">مباراة جديدة 🔄</button>
+            </div>
+        </div>
+
+        <div id="review-screen">
+            <h2 style="text-align: center; color: #fff; margin-top: 0;">تفاصيل التسديدات</h2>
+            <div id="review-list"></div>
+            <button class="close-review-btn" onclick="startFresh()">إنهاء المباراة</button>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(); 
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+            
+            if (type === 'correct') { // صوت صافرة الحكم واحتفال
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.2); 
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.8);
+            } else if (type === 'wrong') { // صوت خيبة أمل / عارضة
+                osc.type = 'triangle'; 
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3); 
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'tick') {
+                osc.type = 'square'; 
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.01, audioCtx.currentTime); 
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            }
+        }
+
+        let quizData = [
+            { q: "ما هو أطول نهر في العالم؟", options: ["نهر الأمازون", "نهر النيل", "نهر المسيسيبي", "نهر الفرات"], correct: 1, explanation: "نهر النيل يعتبر الأطول في العالم، حيث يمر بعدة دول أفريقية." },
+            { q: "أي كوكب يُعرف باسم 'الكوكب الأحمر'؟", options: ["الزهرة", "المشتري", "المريخ", "زحل"], correct: 2, explanation: "المريخ يسمى الكوكب الأحمر بسبب أكسيد الحديد الذي يغطي سطحه وينطيه لون مائل للحمرة." },
+            { q: "من هو العالم الذي اخترع المصباح الكهربائي؟", options: ["ألبرت أينشتاين", "نيكولا تسلا", "ألكسندر غراهام بيل", "توماس إديسون"], correct: 3, explanation: "توماس إديسون هو من طوّر أول مصباح كهربائي متوهج وعملي." },
+            { q: "كم عدد قارات العالم؟", options: ["5 قارات", "6 قارات", "7 قارات", "8 قارات"], correct: 2, explanation: "العالم يتكون من 7 قارات: آسيا، أفريقيا، أوروبا، أمريكا الشمالية، أمريكا الجنوبية، أستراليا، والقارة القطبية الجنوبية." },
+            { q: "ما هي عاصمة اليابان؟", options: ["بكين", "سيول", "طوكيو", "بانكوك"], correct: 2, explanation: "طوكيو هي عاصمة اليابان وتعتبر من أكبر المدن المكتظة بالسكان في العالم." }
+        ];
+
+        const happyReplies = ["عالللللمي! ⚽", "بالمقص! 🔥", "عاش الشويت! 🤩", "هدف خرافي! 🥅", "ولا يگدرلها الحارس! ✨"];
+        const sadReplies = ["بالعارضة! 🤦‍♂️", "صدها الحارس! 🧤", "شوتة ضعيفة! 🧐", "ضيعتها! 💔", "الوقت خلص! ⏰"];
+
+        let currentQ = 0; let score = 0; let streak = 0; let userAnswers = [];
+        let timeLeft = 20; let timerInterval; let tickInterval;
+
+        let highScore = localStorage.getItem('penaltyQuizBest') || 0;
+        document.getElementById('highscore-badge').innerText = `🏆 أعلى نتيجة: ${highScore}`;
+
+        const gk = document.getElementById('gk');
+        const ball = document.getElementById('ball');
+        const goalText = document.getElementById('goal-text');
+
+        const bubble = document.getElementById('speech-bubble'); const streakBadge = document.getElementById('streak-badge');
+        const qText = document.getElementById('question-text'); const optsContainer = document.getElementById('options-container');
+        const expBox = document.getElementById('explanation-box'); const resTitle = document.getElementById('result-title');
+        const expText = document.getElementById('explanation-text'); const nextBtn = document.getElementById('next-btn');
+        const timerBar = document.getElementById('timer-bar'); const uiContainer = document.getElementById('ui-container');
+
+        function startFresh() {
+            document.getElementById('completion-screen').style.display = 'none';
+            document.getElementById('review-screen').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            
+            currentQ = 0; score = 0; streak = 0; userAnswers = [];
+            streakBadge.style.display = 'none';
+            loadQ();
+        }
+
+        function startTimer() {
+            let maxTime = 20;
+            timeLeft = maxTime;
+            timerBar.style.width = '100%'; timerBar.classList.remove('timer-warning');
+            clearInterval(timerInterval); clearInterval(tickInterval);
+            
+            if(audioCtx) tickInterval = setInterval(() => playSound('tick'), 1000);
+
+            timerInterval = setInterval(() => {
+                timeLeft--; timerBar.style.width = `${(timeLeft / maxTime) * 100}%`;
+                if (timeLeft === 5) { timerBar.classList.add('timer-warning'); clearInterval(tickInterval); if(audioCtx) tickInterval = setInterval(() => playSound('tick'), 300); }
+                if (timeLeft <= 0) { clearInterval(timerInterval); clearInterval(tickInterval); checkAns(-1, null); }
+            }, 1000);
+        }
+
+        function loadQ() {
+            if (currentQ >= quizData.length) return;
+            
+            // إرجاع الكرة والحارس لمكانهم الطبيعي
+            ball.className = 'ball';
+            gk.className = 'goalkeeper';
+            goalText.classList.remove('show');
+
+            const current = quizData[currentQ];
+            document.getElementById('q-counter').innerText = `الضربة ${currentQ + 1} من ${quizData.length}`;
+            qText.innerText = current.q; 
+            
+            optsContainer.innerHTML = '';
+            expBox.style.display = 'none'; bubble.style.display = 'none'; bubble.style.opacity = '0';
+            
+            nextBtn.innerText = (currentQ === quizData.length - 1) ? "صافرة النهاية 🏁" : "الضربة القادمة ⚽";
+
+            current.options.forEach((opt, idx) => {
+                let btn = document.createElement('button'); btn.className = 'opt-btn'; btn.innerText = opt;
+                btn.onclick = () => { initAudio(); checkAns(idx, btn); };
+                optsContainer.appendChild(btn);
+            });
+            startTimer(); uiContainer.scrollTop = 0;
+        }
+
+        function checkAns(idx, btn) {
+            clearInterval(timerInterval); clearInterval(tickInterval);
+
+            const current = quizData[currentQ]; const btns = optsContainer.querySelectorAll('button');
+            const isCorrect = (idx === current.correct); const isTimeout = (idx === -1);
+            
+            userAnswers.push({
+                question: current.q, userPicked: isTimeout ? "لم يُجب (انتهى الوقت)" : current.options[idx],
+                correctAnswer: current.options[current.correct], isCorrect: isCorrect, explanation: current.explanation
+            });
+            
+            btns.forEach(b => b.disabled = true);
+            btns[current.correct].style.background = 'rgba(0, 255, 150, 0.4)'; btns[current.correct].style.borderColor = '#00ff9d';
+
+            bubble.style.display = 'block'; setTimeout(() => bubble.style.opacity = '1', 10);
+
+            if (isCorrect) {
+                playSound('correct'); 
+                
+                // أنيميشن الهدف
+                let side = Math.random() > 0.5 ? 'kick-goal-left' : 'kick-goal-right';
+                ball.classList.add(side);
+                gk.classList.add(side === 'kick-goal-left' ? 'gk-dive-right' : 'gk-dive-left'); // الحارس يگمز بالعكس
+                setTimeout(() => goalText.classList.add('show'), 300);
+
+                resTitle.innerText = "✅ إجابة صحيحة"; resTitle.style.color = "#00ff9d";
+                bubble.innerText = happyReplies[Math.floor(Math.random() * happyReplies.length)]; bubble.style.color = "#059669";
+                score++; streak++; 
+                if (streak >= 2) { streakBadge.style.display = 'block'; streakBadge.innerText = `🔥 هاتريك: ${streak}`; }
+            } else {
+                playSound('wrong'); 
+                
+                // أنيميشن الصد
+                ball.classList.add('kick-miss');
+                gk.classList.add('gk-save'); // الحارس يصدها بالنص
+
+                streak = 0; streakBadge.style.display = 'none';
+                if (isTimeout) { resTitle.innerText = "⏰ انتهى الوقت!"; bubble.innerText = "الوقت خلص! ⏰"; } 
+                else { resTitle.innerText = "❌ إجابة خاطئة!"; btn.style.background = 'rgba(255, 50, 50, 0.4)'; btn.style.borderColor = '#ff3232'; bubble.innerText = sadReplies[Math.floor(Math.random() * sadReplies.length)]; }
+                resTitle.style.color = "#ff3232"; bubble.style.color = "#dc2626";
+            }
+
+            expText.innerText = current.explanation; expBox.style.display = 'block';
+            setTimeout(() => { uiContainer.scrollTo({ top: uiContainer.scrollHeight, behavior: 'smooth' }); }, 100);
+        }
+
+        function moveToNext() {
+            currentQ++;
+            if(currentQ < quizData.length) { loadQ(); } 
+            else { showCompletion(); }
+        }
+
+        function shootConfetti() {
+            const colors = ['#00ff9d', '#00aaff', '#ffd700', '#ffffff'];
+            for (let i = 0; i < 60; i++) {
+                let conf = document.createElement('div'); conf.className = 'confetti';
+                conf.style.left = Math.random() * 100 + 'vw'; conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.animationDuration = (Math.random() * 2 + 2) + 's'; conf.style.top = '-' + (Math.random() * 20 + 10) + 'px';
+                document.body.appendChild(conf); setTimeout(() => conf.remove(), 4000);
+            }
+        }
+
+        function showCompletion() {
+            document.getElementById('quiz-content').style.display = 'none'; bubble.style.display = 'none'; streakBadge.style.display = 'none'; 
+            
+            if (score > highScore) { highScore = score; localStorage.setItem('penaltyQuizBest', highScore); document.getElementById('highscore-badge').innerText = `🏆 أعلى نتيجة: ${highScore}`; }
+
+            const praiseText = document.getElementById('final-praise'); const descText = document.getElementById('final-desc');
+            const finalScoreObj = document.getElementById('final-score'); const trophy = document.getElementById('final-trophy');
+
+            if (score >= 4) {
+                praiseText.innerText = "بطل المباراة! 🏆"; praiseText.style.color = "#00ff9d"; finalScoreObj.style.color = "#00ff9d";
+                descText.innerText = "عاش الشويت، ولا طوبة ضاعت منك تقريباً!"; 
+                trophy.innerText = "🥇"; playSound('correct'); shootConfetti();
+            } else if (score >= 3) {
+                praiseText.innerText = "أداء جيد! 👍"; praiseText.style.color = "#ffd700"; finalScoreObj.style.color = "#ffd700";
+                descText.innerText = "فزت بالمباراة بصعوبة، بس يرادلك تركيز أكثر بالتسديد!"; 
+                trophy.innerText = "🥈"; shootConfetti();
+            } else {
+                praiseText.innerText = "خسرت المباراة! 💔"; praiseText.style.color = "#ff3232"; finalScoreObj.style.color = "#ff3232";
+                descText.innerText = "الحارس صد طوباتك كلها.. راجع معلوماتك وارجع شوت من جديد!"; 
+                trophy.innerText = "🧤"; playSound('wrong');
+            }
+
+            document.getElementById('final-score').innerText = `${score} / 5`; 
+            document.getElementById('completion-screen').style.display = 'block'; uiContainer.scrollTop = 0;
+        }
+
+        function showReview() {
+            document.getElementById('completion-screen').style.display = 'none';
+            const reviewList = document.getElementById('review-list'); reviewList.innerHTML = ''; 
+
+            userAnswers.forEach((ans, index) => {
+                let div = document.createElement('div'); div.className = 'review-item';
+                let userStatus = ans.isCorrect ? `<span class="ans-correct">✅ ${ans.userPicked}</span>` : `<span class="ans-wrong">❌ ${ans.userPicked}</span> (الصحيح: ${ans.correctAnswer})`;
+                div.innerHTML = `<div class="review-q">الضربة ${index + 1}: ${ans.question}</div><div class="review-ans">إجابتك: ${userStatus}</div><div class="review-exp">💡 <b>توضيح:</b> ${ans.explanation}</div>`;
+                reviewList.appendChild(div);
+            });
+            document.getElementById('review-screen').style.display = 'block'; uiContainer.scrollTop = 0;
+        }
+
+        startFresh();
+    </script>
+</body>
+</html>
